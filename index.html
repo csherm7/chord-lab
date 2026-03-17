@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0e0e16">
+<meta name="description" content="Guitar & Piano chord practice tool">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Chord Lab</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0e0e16;
+  --surface: #16162a;
+  --surface2: #1e1e34;
+  --border: #28284a;
+  --text: #ddd8c4;
+  --muted: #60608a;
+  --accent: #e8a020;
+  --teal: #4ecdc4;
+  --purple: #9060e0;
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  min-height: 100vh;
+  padding: 24px 20px 60px;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 5% 5%, rgba(78,205,196,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 60% at 95% 95%, rgba(232,160,32,0.05) 0%, transparent 55%);
+}
+.app { max-width: 960px; margin: 0 auto; }
+
+/* Header */
+header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-bottom: 28px;
+  margin-bottom: 36px;
+  border-bottom: 1px solid var(--border);
+  gap: 16px;
+}
+.logo { font-family: 'Playfair Display', serif; font-size: 28px; letter-spacing: -0.5px; line-height: 1; margin-bottom: 4px; }
+.logo em { font-style: italic; color: var(--accent); }
+.tagline { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); }
+.random-btn {
+  flex-shrink: 0;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px; font-weight: 600;
+  letter-spacing: 2px; text-transform: uppercase;
+  background: var(--accent); color: #0e0e16;
+  border: none; padding: 13px 22px; cursor: pointer;
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  transition: background 0.15s, transform 0.1s;
+}
+.random-btn:hover { background: #f0b838; }
+.random-btn:active { transform: scale(0.97); }
+
+/* Hero */
+.chord-hero { text-align: center; padding: 36px 0 32px; }
+.chord-name {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(72px, 14vw, 136px);
+  font-weight: 700; line-height: 0.9; color: var(--text);
+  transition: opacity 0.25s, transform 0.25s;
+}
+.chord-name.fade { opacity: 0; transform: translateY(10px); }
+.chord-quality-label { font-size: 11px; letter-spacing: 5px; text-transform: uppercase; color: var(--muted); margin-top: 16px; }
+.chord-note-list { font-size: 15px; color: var(--teal); margin-top: 10px; letter-spacing: 3px; }
+
+/* Sections */
+.section { margin-bottom: 44px; }
+.section-header { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.section-title { font-size: 10px; letter-spacing: 4px; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.section-line { flex: 1; height: 1px; background: var(--border); }
+.diagram-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+@media (max-width: 640px) { .diagram-row { grid-template-columns: 1fr; } }
+.card { background: var(--surface); border: 1px solid var(--border); padding: 18px; border-radius: 1px; }
+.card-title { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+.overflow-scroll { overflow-x: auto; }
+
+/* Variations */
+.variations-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+.var-card { background: var(--surface); border: 1px solid var(--border); padding: 14px; transition: border-color 0.2s; }
+.var-card:hover { border-color: var(--accent); }
+.var-name { font-size: 20px; font-weight: 600; margin-bottom: 2px; color: var(--text); }
+.var-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.var-notes { font-size: 10px; color: var(--teal); margin-bottom: 10px; letter-spacing: 1px; }
+.var-diagrams { display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
+
+/* Legend */
+.legend { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 12px; }
+.legend-item { display: flex; align-items: center; gap: 7px; font-size: 10px; color: var(--muted); letter-spacing: 1px; }
+.legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+.legend-dot.root { background: var(--accent); }
+.legend-dot.chord { background: var(--teal); }
+.legend-dot.scale { background: var(--purple); }
+
+/* Empty state */
+.empty { text-align: center; padding: 80px 20px 100px; }
+.empty-glyph { font-family: 'Playfair Display', serif; font-size: 80px; color: var(--muted); opacity: 0.25; margin-bottom: 18px; line-height: 1; }
+.empty-title { font-family: 'Playfair Display', serif; font-size: 26px; color: var(--muted); margin-bottom: 8px; }
+.empty-sub { font-size: 11px; color: var(--muted); letter-spacing: 1px; opacity: 0.7; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <div class="logo">Chord<em>Lab</em></div>
+      <div class="tagline">Guitar &amp; Piano Practice Tool</div>
+    </div>
+    <button class="random-btn" onclick="randomChord()">🎲 Random Chord</button>
+  </header>
+
+  <div id="empty-state" class="empty">
+    <div class="empty-glyph">♩</div>
+    <div class="empty-title">Ready when you are</div>
+    <div class="empty-sub">Press the button to get a random chord</div>
+  </div>
+
+  <div id="chord-content" style="display:none">
+    <div class="chord-hero">
+      <div class="chord-name" id="chord-name-el">C</div>
+      <div class="chord-quality-label" id="chord-quality-el">Major</div>
+      <div class="chord-note-list" id="chord-notes-el"></div>
+    </div>
+
+    <!-- Chord Voicing -->
+    <div class="section">
+      <div class="section-header"><div class="section-title">Chord Voicing</div><div class="section-line"></div></div>
+      <div class="diagram-row">
+        <div class="card">
+          <div class="card-title">Piano</div>
+          <div class="overflow-scroll" id="chord-piano"></div>
+          <div class="legend" style="margin-top:10px">
+            <div class="legend-item"><div class="legend-dot root"></div>Root</div>
+            <div class="legend-item"><div class="legend-dot chord"></div>Chord tone</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Guitar</div>
+          <div id="chord-guitar"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scale -->
+    <div class="section">
+      <div class="section-header"><div class="section-title">Scale</div><div class="section-line"></div></div>
+      <div class="diagram-row">
+        <div class="card">
+          <div class="card-title">Piano</div>
+          <div class="overflow-scroll" id="scale-piano"></div>
+          <div class="legend" style="margin-top:10px">
+            <div class="legend-item"><div class="legend-dot root"></div>Root</div>
+            <div class="legend-item"><div class="legend-dot scale"></div>Scale tone</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Guitar Neck — Frets 0–12</div>
+          <div class="overflow-scroll" id="scale-guitar"></div>
+          <div class="legend" style="margin-top:10px">
+            <div class="legend-item"><div class="legend-dot root"></div>Root</div>
+            <div class="legend-item"><div class="legend-dot scale"></div>Scale tone</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Variations -->
+    <div class="section">
+      <div class="section-header"><div class="section-title">Chord Variations</div><div class="section-line"></div></div>
+      <div class="variations-grid" id="variations-container"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════════
+// THEORY DATA
+// ═══════════════════════════════════════════════════════════════
+
+const SHARP_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const FLAT_NAMES  = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+const PREFER_FLAT = new Set([1,3,6,8,10]);
+
+function noteName(semitone, useFlat) {
+  const s = ((semitone % 12) + 12) % 12;
+  const pf = (useFlat !== undefined) ? useFlat : PREFER_FLAT.has(s);
+  return pf ? FLAT_NAMES[s] : SHARP_NAMES[s];
+}
+
+const QUALITIES = {
+  maj: { label: 'Major', symbol: '',  intervals: [0,4,7] },
+  min: { label: 'Minor', symbol: 'm', intervals: [0,3,7] },
+};
+
+const SCALES = {
+  maj: [0,2,4,5,7,9,11],
+  min: [0,2,3,5,7,8,10],
+};
+
+const VARIATIONS = {
+  dom7:  { label: 'Dominant 7th',  symbol: '7',    intervals: [0,4,7,10]   },
+  maj7:  { label: 'Major 7th',     symbol: 'maj7', intervals: [0,4,7,11]   },
+  sus2:  { label: 'Suspended 2nd', symbol: 'sus2', intervals: [0,2,7]      },
+  sus4:  { label: 'Suspended 4th', symbol: 'sus4', intervals: [0,5,7]      },
+  add9:  { label: 'Add 9',         symbol: 'add9', intervals: [0,4,7,2]    },
+  sixth: { label: 'Major 6th',     symbol: '6',    intervals: [0,4,7,9]    },
+  aug:   { label: 'Augmented',     symbol: 'aug',  intervals: [0,4,8]      },
+  min7:  { label: 'Minor 7th',     symbol: 'm7',   intervals: [0,3,7,10]   },
+  min9:  { label: 'Minor 9th',     symbol: 'm9',   intervals: [0,3,7,10,2] },
+  dim:   { label: 'Diminished',    symbol: 'dim',  intervals: [0,3,6]      },
+  dim7:  { label: 'Dim 7th',       symbol: 'dim7', intervals: [0,3,6,9]    },
+  min6:  { label: 'Minor 6th',     symbol: 'm6',   intervals: [0,3,7,9]    },
+};
+
+const MAJ_VARS = ['dom7','maj7','sus2','sus4','add9','sixth','aug'];
+const MIN_VARS = ['min7','min9','dim','dim7','sus2','sus4','min6'];
+
+// ═══════════════════════════════════════════════════════════════
+// GUITAR DATA
+// Open string semitones (C=0): low E → high e
+// ═══════════════════════════════════════════════════════════════
+
+const OPEN_STRINGS = [4, 9, 2, 7, 11, 4]; // E A D G B e
+
+// Hardcoded open voicings for common chords
+const GUITAR_SHAPES = {
+  C_maj:[-1,3,2,0,1,0], D_maj:[-1,-1,0,2,3,2], E_maj:[0,2,2,1,0,0],
+  G_maj:[3,2,0,0,0,3], A_maj:[-1,0,2,2,2,0],
+  A_min:[-1,0,2,2,1,0], D_min:[-1,-1,0,2,3,1], E_min:[0,2,2,0,0,0],
+};
+
+// Barre chord offset tables (relative to barre fret)
+// E-shape: root on string 6 at fret Re = (rootSemi - 4 + 12) % 12
+const E_OFFSETS = {
+  dom7:  [0, 2, 0, 1, 0, 0],
+  maj7:  [0, 2, 1, 1, 0, 0],
+  sus2:  [0, 2, 4, 4, 0, 0],
+  sus4:  [0, 2, 2, 2, 0, 0],
+  aug:   [0, 3, 2, 1, 1, 0],
+  add9:  [0, 2, 4, 1, 0, 0],
+  sixth: [0, 2, 2, 1, 2, 0],
+  min7:  [0, 2, 0, 0, 0, 0],
+  min9:  [0, 2, 0, 0, 0, 2],
+  dim:   [0, 1, 2, 0, -1, -1],
+  min6:  [0, 2, 2, 0, 2, 0],
+};
+
+// A-shape: root on string 5 at fret Ra = (rootSemi - 9 + 12) % 12
+const A_OFFSETS = {
+  dom7:  [-1, 0, 2, 0, 2, 0],
+  maj7:  [-1, 0, 2, 1, 2, 0],
+  sus2:  [-1, 0, 2, 2, 0, 0],
+  sus4:  [-1, 0, 2, 2, 3, 0],
+  aug:   [-1, 0, 3, 2, 2, 1],
+  add9:  [-1, 0, 2, 4, 2, 0],
+  sixth: [-1, 0, 2, 2, 2, 2],
+  min7:  [-1, 0, 2, 0, 1, 0],
+  dim:   [-1, 0, 1, 2, 1, -1],
+  min6:  [-1, 0, 2, 2, 1, 2],
+};
+
+function getVariationShape(rootSemi, varKey) {
+  // Dim7: symmetric pattern on strings 4-1
+  if (varKey === 'dim7') {
+    let Rd = ((rootSemi - 2) % 12 + 12) % 12;
+    if (Rd > 9) Rd -= 3;
+    if (Rd > 9) Rd -= 3;
+    return [-1, -1, Rd, Rd + 1, Rd, Rd + 1];
+  }
+
+  const Re = ((rootSemi - 4) % 12 + 12) % 12;
+  const Ra = ((rootSemi - 9) % 12 + 12) % 12;
+
+  function buildShape(offsets, R) {
+    if (!offsets) return null;
+    const frets = offsets.map(o => o === -1 ? -1 : R + o);
+    const active = frets.filter(f => f > 0);
+    if (!active.length) return frets;
+    const maxF = Math.max(...active);
+    const minF = Math.min(...active);
+    if (maxF > 15) return null;
+    if (R > 0 && maxF - minF > 4) return null;
+    return frets;
+  }
+
+  const eShape = buildShape(E_OFFSETS[varKey], Re);
+  const aShape = buildShape(A_OFFSETS[varKey], Ra);
+
+  if (!eShape && !aShape) return null;
+  if (!eShape) return aShape;
+  if (!aShape) return eShape;
+
+  const eMax = Math.max(...eShape.filter(f => f > 0), 0);
+  const aMax = Math.max(...aShape.filter(f => f > 0), 0);
+  return eMax <= aMax ? eShape : aShape;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+
+let CUR_ROOT = 0;
+let CUR_FLAT = false;
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN LOGIC
+// ═══════════════════════════════════════════════════════════════
+
+function randomChord() {
+  const root = Math.floor(Math.random() * 12);
+  const qual = Math.random() > 0.5 ? 'maj' : 'min';
+  showChord(root, qual);
+}
+
+function showChord(root, qual) {
+  CUR_ROOT = root;
+  CUR_FLAT = PREFER_FLAT.has(root);
+  const flat = CUR_FLAT;
+
+  const rootName = noteName(root);
+  const qData = QUALITIES[qual];
+  const chordNotes = qData.intervals.map(i => (root + i) % 12);
+  const scaleNotes = SCALES[qual].map(i => (root + i) % 12);
+  const chordNoteNames = chordNotes.map(n => noteName(n, flat));
+
+  const nameEl = document.getElementById('chord-name-el');
+  nameEl.classList.add('fade');
+  setTimeout(() => {
+    nameEl.textContent = rootName + qData.symbol;
+    document.getElementById('chord-quality-el').textContent =
+      qData.label + ' · ' + (qual === 'maj' ? 'Major Scale' : 'Natural Minor Scale');
+    document.getElementById('chord-notes-el').textContent = chordNoteNames.join('  ·  ');
+    nameEl.classList.remove('fade');
+  }, 150);
+
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('chord-content').style.display = 'block';
+
+  // Chord piano
+  const cpEl = document.getElementById('chord-piano');
+  cpEl.innerHTML = '';
+  cpEl.appendChild(drawPiano(chordNotes, root, false));
+
+  // Scale piano
+  const spEl = document.getElementById('scale-piano');
+  spEl.innerHTML = '';
+  spEl.appendChild(drawPiano(scaleNotes, root, true));
+
+  // Guitar chord diagram
+  const shapeKey = rootName + '_' + qual;
+  const frets = GUITAR_SHAPES[shapeKey] || computeBarreShape(root, qual);
+  const cgEl = document.getElementById('chord-guitar');
+  cgEl.innerHTML = '';
+  cgEl.appendChild(drawChordDiagram(frets, chordNotes, root));
+
+  // Scale neck
+  const sgEl = document.getElementById('scale-guitar');
+  sgEl.innerHTML = '';
+  sgEl.appendChild(drawNeck(scaleNotes, root));
+
+  // Variations
+  renderVariations(root, qual, flat, rootName);
+}
+
+function computeBarreShape(root, qual) {
+  const Re = ((root - 4) % 12 + 12) % 12;
+  const Ra = ((root - 9) % 12 + 12) % 12;
+  const eOff = qual === 'maj' ? [0,2,2,1,0,0] : [0,2,2,0,0,0];
+  const aOff = qual === 'maj' ? [-1,0,2,2,2,0] : [-1,0,2,2,1,0];
+  const eMax = Re + 2;
+  const aMax = Ra + 2;
+  if (eMax <= aMax) return eOff.map(o => o === -1 ? -1 : Re + o);
+  return aOff.map(o => o === -1 ? -1 : Ra + o);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PIANO RENDERER (two octaves)
+// ═══════════════════════════════════════════════════════════════
+
+function drawPiano(highlightNotes, root, isScale) {
+  const hl = new Set(highlightNotes);
+  const WW = 26, WH = 84, BW = 16, BH = 52, OCTAVES = 2;
+  const WHITE_SEMIS = [0,2,4,5,7,9,11];
+  const BLACK_KEYS = [
+    {afterWhite:0,semi:1},{afterWhite:1,semi:3},
+    {afterWhite:3,semi:6},{afterWhite:4,semi:8},{afterWhite:5,semi:10}
+  ];
+  const W = OCTAVES * 7 * WW + 1;
+  const svg = mkSvg(W, WH + 10);
+
+  for (let oct = 0; oct < OCTAVES; oct++) {
+    for (let i = 0; i < 7; i++) {
+      const semi = WHITE_SEMIS[i];
+      const isHl = hl.has(semi);
+      const isRoot = semi === root;
+      const x = (oct * 7 + i) * WW;
+      const r = mkRect(x + 0.5, 0.5, WW - 1, WH - 1, 2);
+      setKeyFill(r, isHl, isRoot, isScale, true);
+      svg.appendChild(r);
+      if (isHl) {
+        const t = mkText(x + WW / 2, WH - 8, noteName(semi, CUR_FLAT), 9, isRoot ? '#1e0e00' : '#0a1a18');
+        t.setAttribute('font-weight','600');
+        svg.appendChild(t);
+      }
+    }
+  }
+
+  for (let oct = 0; oct < OCTAVES; oct++) {
+    for (const bk of BLACK_KEYS) {
+      const semi = bk.semi;
+      const isHl = hl.has(semi);
+      const isRoot = semi === root;
+      const cx = (oct * 7 + bk.afterWhite + 1) * WW;
+      const r = mkRect(cx - BW / 2 + 0.5, 0.5, BW - 1, BH - 1, 2);
+      setKeyFill(r, isHl, isRoot, isScale, false);
+      svg.appendChild(r);
+      if (isHl) {
+        const dotY = BH - 13;
+        const d = mkCircle(cx, dotY, 5);
+        d.setAttribute('fill','rgba(0,0,0,0.25)');
+        svg.appendChild(d);
+        const t = mkText(cx, dotY + 4, noteName(semi, CUR_FLAT), 7, 'rgba(255,255,255,0.92)');
+        t.setAttribute('font-weight','700');
+        svg.appendChild(t);
+      }
+    }
+  }
+  return svg;
+}
+
+function setKeyFill(el, isHl, isRoot, isScale, isWhite) {
+  let fill, stroke;
+  if (isRoot && isHl) { fill = '#e8a020'; stroke = '#f0c040'; }
+  else if (isHl) { fill = isScale ? '#9060e0' : '#4ecdc4'; stroke = isScale ? '#a878f0' : '#68dcd4'; }
+  else { fill = isWhite ? '#d8d4c0' : '#18182e'; stroke = isWhite ? '#999' : '#333'; }
+  el.setAttribute('fill', fill);
+  el.setAttribute('stroke', stroke);
+  el.setAttribute('stroke-width', isWhite ? '1' : '0.8');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MINI PIANO (one octave, for variation cards)
+// ═══════════════════════════════════════════════════════════════
+
+function drawMiniPiano(hlNotes, root) {
+  const hl = new Set(hlNotes);
+  const WW = 14, WH = 40, BW = 9, BH = 26;
+  const WHITE_SEMIS = [0,2,4,5,7,9,11];
+  const BLACK_KEYS = [
+    {afterWhite:0,semi:1},{afterWhite:1,semi:3},
+    {afterWhite:3,semi:6},{afterWhite:4,semi:8},{afterWhite:5,semi:10}
+  ];
+  const svg = mkSvg(7 * WW + 1, WH + 2);
+
+  for (let i = 0; i < 7; i++) {
+    const semi = WHITE_SEMIS[i];
+    const isHl = hl.has(semi);
+    const isRoot = semi === root;
+    const r = mkRect(i * WW + 0.5, 0.5, WW - 1, WH - 1, 1);
+    r.setAttribute('fill', isRoot && isHl ? '#e8a020' : isHl ? '#4ecdc4' : '#cac6b2');
+    r.setAttribute('stroke','#888'); r.setAttribute('stroke-width','0.5');
+    svg.appendChild(r);
+  }
+  for (const bk of BLACK_KEYS) {
+    const semi = bk.semi;
+    const isHl = hl.has(semi);
+    const isRoot = semi === root;
+    const cx = (bk.afterWhite + 1) * WW;
+    const r = mkRect(cx - BW / 2 + 0.5, 0.5, BW - 1, BH - 1, 1);
+    r.setAttribute('fill', isRoot && isHl ? '#e8a020' : isHl ? '#4ecdc4' : '#18182e');
+    r.setAttribute('stroke','#333'); r.setAttribute('stroke-width','0.5');
+    svg.appendChild(r);
+  }
+  return svg;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GUITAR CHORD DIAGRAM (full size)
+// ═══════════════════════════════════════════════════════════════
+
+function drawChordDiagram(frets, chordNotes, root) {
+  return _chordDiagram(frets, chordNotes, root, 30, 34, 5, 38, 46, false);
+}
+
+function drawMiniChordDiagram(frets, chordNotes, root) {
+  return _chordDiagram(frets, chordNotes, root, 20, 24, 4, 26, 34, true);
+}
+
+function _chordDiagram(frets, chordNotes, root, SS, FS, ROWS, LP, TP, mini) {
+  const played = frets.filter(f => f > 0);
+  const minF = played.length ? Math.min(...played) : 1;
+  const baseFret = minF <= 3 ? 1 : minF;
+
+  const svgW = LP + 5 * SS + (mini ? 14 : 22);
+  const svgH = TP + ROWS * FS + (mini ? 20 : 28);
+  const svg = mkSvg(svgW, svgH);
+  if (!mini) svg.style.margin = '0 auto';
+
+  // Nut or fret label
+  if (baseFret === 1) {
+    const nut = mkRect(LP, TP - 5, 5 * SS, 5, 0);
+    nut.setAttribute('fill','#b8a870');
+    svg.appendChild(nut);
+  } else {
+    const t = mkText(LP - (mini ? 5 : 7), TP + FS * 0.55, baseFret + 'fr', mini ? 8 : 10, '#5a5a80');
+    t.setAttribute('text-anchor','end');
+    svg.appendChild(t);
+  }
+
+  // Fret lines
+  for (let f = 0; f <= ROWS; f++) {
+    const y = TP + f * FS;
+    svg.appendChild(mkLine(LP, y, LP + 5 * SS, y, '#282848', f === 0 ? '1.5' : '1'));
+  }
+
+  // String lines
+  for (let s = 0; s < 6; s++) {
+    const x = LP + s * SS;
+    const sw = s < 2 ? 2.5 : s < 4 ? 1.6 : 1.1;
+    svg.appendChild(mkLine(x, TP, x, TP + ROWS * FS, '#363660', sw));
+  }
+
+  const STR_NAMES = ['E','A','D','G','B','e'];
+  const dotR = mini ? 8 : 12;
+  const fontSize = mini ? 7 : 9;
+
+  for (let s = 0; s < 6; s++) {
+    const f = frets[s];
+    const x = LP + s * SS;
+
+    if (f === -1) {
+      const t = mkText(x, TP - (mini ? 14 : 20), '×', mini ? 12 : 16, '#44446a');
+      t.setAttribute('font-weight','600');
+      svg.appendChild(t);
+    } else if (f === 0) {
+      const c = mkCircle(x, TP - (mini ? 12 : 18), mini ? 5 : 7);
+      c.setAttribute('fill','none');
+      c.setAttribute('stroke','#5a5a80');
+      c.setAttribute('stroke-width','1.5');
+      svg.appendChild(c);
+    } else {
+      const relFret = f - baseFret + 1;
+      if (relFret >= 1 && relFret <= ROWS) {
+        const y = TP + (relFret - 0.5) * FS;
+        const noteClass = (OPEN_STRINGS[s] + f) % 12;
+        const isRoot = noteClass === root;
+        const c = mkCircle(x, y, dotR);
+        c.setAttribute('fill', isRoot ? '#e8a020' : '#4ecdc4');
+        svg.appendChild(c);
+        if (!mini || dotR >= 8) {
+          const t = mkText(x, y + (mini ? 3 : 4), noteName(noteClass, CUR_FLAT), fontSize, '#0e0e16');
+          t.setAttribute('font-weight','700');
+          svg.appendChild(t);
+        }
+      }
+    }
+
+    if (!mini) {
+      svg.appendChild(mkText(x, TP + ROWS * FS + 18, STR_NAMES[s], 9, '#404060'));
+    }
+  }
+
+  return svg;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GUITAR NECK (scale positions, frets 0–12)
+// ═══════════════════════════════════════════════════════════════
+
+function drawNeck(scaleNotes, root) {
+  const scaleSet = new Set(scaleNotes);
+  const FRETS = 12, SS = 20, FS = 26, LP = 48, TP = 10;
+  const svgW = LP + FRETS * FS + 18;
+  const svgH = TP + 5 * SS + 24;
+  const svg = mkSvg(svgW, svgH);
+  svg.setAttribute('width','100%'); svg.style.height = 'auto';
+
+  for (const mf of [3,5,7,9,12]) {
+    const x = LP + (mf - 0.5) * FS;
+    const c = mkCircle(x, TP + 2.5 * SS, mf === 12 ? 4 : 3);
+    c.setAttribute('fill','#1e1e38');
+    svg.appendChild(c);
+  }
+
+  const nut = mkRect(LP - 4, TP - 1, 4, 5 * SS + 2, 0);
+  nut.setAttribute('fill','#b0a060');
+  svg.appendChild(nut);
+
+  for (let f = 0; f <= FRETS; f++) {
+    svg.appendChild(mkLine(LP + f * FS, TP, LP + f * FS, TP + 5 * SS, '#22223c', '0.8'));
+  }
+
+  const STR_ORDER = [5,4,3,2,1,0];
+  const STR_LABELS = ['e','B','G','D','A','E'];
+
+  for (let si = 0; si < 6; si++) {
+    const y = TP + si * SS;
+    const strIdx = STR_ORDER[si];
+    const sw = si >= 4 ? 2.2 : si >= 2 ? 1.4 : 0.9;
+    svg.appendChild(mkLine(LP, y, LP + FRETS * FS, y, '#303050', sw));
+    svg.appendChild(mkText(LP - 26, y + 4, STR_LABELS[si], 9, '#44446a'));
+
+    for (let f = 0; f <= FRETS; f++) {
+      const noteClass = (OPEN_STRINGS[strIdx] + f) % 12;
+      if (!scaleSet.has(noteClass)) continue;
+      const isRoot = noteClass === root;
+      const x = f === 0 ? LP - 22 : LP + (f - 0.5) * FS;
+      const c = mkCircle(x, y, 8);
+      c.setAttribute('fill', isRoot ? '#e8a020' : '#9060e0');
+      svg.appendChild(c);
+      const t = mkText(x, y + 3, noteName(noteClass, CUR_FLAT), 7, isRoot ? '#1e0e00' : '#fff');
+      t.setAttribute('font-weight','700');
+      svg.appendChild(t);
+    }
+  }
+
+  for (const f of [1,3,5,7,9,12]) {
+    svg.appendChild(mkText(LP + (f - 0.5) * FS, TP + 5 * SS + 15, String(f), 8, '#404060'));
+  }
+  return svg;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VARIATIONS
+// ═══════════════════════════════════════════════════════════════
+
+function renderVariations(root, qual, flat, rootName) {
+  const container = document.getElementById('variations-container');
+  container.innerHTML = '';
+  const varList = qual === 'maj' ? MAJ_VARS : MIN_VARS;
+
+  for (const vk of varList) {
+    const v = VARIATIONS[vk];
+    if (!v) continue;
+
+    const notes = v.intervals.map(i => (root + i) % 12);
+    const noteNames = notes.map(n => noteName(n, flat));
+
+    const card = document.createElement('div');
+    card.className = 'var-card';
+
+    const nameDiv = document.createElement('div');
+    nameDiv.className = 'var-name';
+    nameDiv.textContent = rootName + v.symbol;
+
+    const labelDiv = document.createElement('div');
+    labelDiv.className = 'var-label';
+    labelDiv.textContent = v.label;
+
+    const notesDiv = document.createElement('div');
+    notesDiv.className = 'var-notes';
+    notesDiv.textContent = noteNames.join(' · ');
+
+    card.appendChild(nameDiv);
+    card.appendChild(labelDiv);
+    card.appendChild(notesDiv);
+
+    // Diagrams row: mini piano + mini guitar
+    const diagRow = document.createElement('div');
+    diagRow.className = 'var-diagrams';
+    diagRow.appendChild(drawMiniPiano(notes, root));
+
+    const frets = getVariationShape(root, vk);
+    if (frets) {
+      diagRow.appendChild(drawMiniChordDiagram(frets, notes, root));
+    }
+
+    card.appendChild(diagRow);
+    container.appendChild(card);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SVG HELPERS
+// ═══════════════════════════════════════════════════════════════
+
+const NS = 'http://www.w3.org/2000/svg';
+
+function mkSvg(w, h) {
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  svg.setAttribute('width', w);
+  svg.setAttribute('height', h);
+  svg.style.display = 'block';
+  return svg;
+}
+
+function mkRect(x, y, w, h, rx = 0) {
+  const el = document.createElementNS(NS, 'rect');
+  el.setAttribute('x', x); el.setAttribute('y', y);
+  el.setAttribute('width', w); el.setAttribute('height', h);
+  if (rx) el.setAttribute('rx', rx);
+  return el;
+}
+
+function mkCircle(cx, cy, r) {
+  const el = document.createElementNS(NS, 'circle');
+  el.setAttribute('cx', cx); el.setAttribute('cy', cy); el.setAttribute('r', r);
+  return el;
+}
+
+function mkLine(x1, y1, x2, y2, stroke = '#333', sw = '1') {
+  const el = document.createElementNS(NS, 'line');
+  el.setAttribute('x1', x1); el.setAttribute('y1', y1);
+  el.setAttribute('x2', x2); el.setAttribute('y2', y2);
+  el.setAttribute('stroke', stroke); el.setAttribute('stroke-width', sw);
+  return el;
+}
+
+function mkText(x, y, content, size = 12, fill = '#ddd8c4') {
+  const el = document.createElementNS(NS, 'text');
+  el.setAttribute('x', x); el.setAttribute('y', y);
+  el.setAttribute('text-anchor','middle');
+  el.setAttribute('font-size', size);
+  el.setAttribute('font-family','IBM Plex Mono, monospace');
+  el.setAttribute('fill', fill);
+  el.textContent = content;
+  return el;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PWA: Register service worker
+// ═══════════════════════════════════════════════════════════════
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .catch(err => console.warn('SW registration failed:', err));
+  });
+}
+</script>
+</body>
+</html>
