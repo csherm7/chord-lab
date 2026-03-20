@@ -100,6 +100,73 @@ header {
 .legend-dot.chord { background: var(--teal); }
 .legend-dot.scale { background: var(--purple); }
 
+
+/* Chord selector */
+.selector {
+  margin-bottom: 32px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--border);
+}
+.selector-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.selector-label {
+  font-size: 9px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  width: 44px;
+  flex-shrink: 0;
+}
+.note-btn, .qual-btn {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  background: none;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+  min-width: 36px;
+  text-align: center;
+}
+.note-btn:hover, .qual-btn:hover {
+  color: var(--text);
+  border-color: var(--muted);
+}
+.note-btn.active {
+  color: #0e0e16;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.qual-btn.active {
+  color: #0e0e16;
+  background: var(--teal);
+  border-color: var(--teal);
+}
+.selector-go {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  background: none;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  padding: 6px 16px;
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s;
+  margin-top: 4px;
+}
+.selector-go:hover { color: var(--text); border-color: var(--muted); }
+.selector-go.ready { color: var(--accent); border-color: var(--accent); }
+
 /* Empty state */
 .empty { text-align: center; padding: 80px 20px 100px; }
 .empty-glyph { font-family: 'Playfair Display', serif; font-size: 80px; color: var(--muted); opacity: 0.25; margin-bottom: 18px; line-height: 1; }
@@ -116,6 +183,19 @@ header {
     </div>
     <button class="random-btn" onclick="randomChord()">🎲 Random Chord</button>
   </header>
+
+  <div class="selector">
+    <div class="selector-row">
+      <span class="selector-label">Root</span>
+      <div id="note-btns" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+    </div>
+    <div class="selector-row">
+      <span class="selector-label">Quality</span>
+      <button class="qual-btn active" data-qual="maj" onclick="selectQual('maj')">Major</button>
+      <button class="qual-btn" data-qual="min" onclick="selectQual('min')">Minor</button>
+      <button class="selector-go" id="go-btn" onclick="goChord()">Show chord →</button>
+    </div>
+  </div>
 
   <div id="empty-state" class="empty">
     <div class="empty-glyph">♩</div>
@@ -727,6 +807,56 @@ function mkText(x, y, content, size = 12, fill = '#ddd8c4') {
   el.textContent = content;
   return el;
 }
+
+
+// ═══════════════════════════════════════════════════════════════
+// CHORD SELECTOR
+// ═══════════════════════════════════════════════════════════════
+
+const NOTE_LABELS = ['C','C#/Db','D','D#/Eb','E','F','F#/Gb','G','G#/Ab','A','A#/Bb','B'];
+
+let SEL_ROOT = null;
+let SEL_QUAL = 'maj';
+
+function buildSelector() {
+  const wrap = document.getElementById('note-btns');
+  NOTE_LABELS.forEach((label, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'note-btn';
+    btn.textContent = label;
+    btn.dataset.note = i;
+    btn.onclick = () => selectNote(i);
+    wrap.appendChild(btn);
+  });
+}
+
+function selectNote(i) {
+  SEL_ROOT = i;
+  document.querySelectorAll('.note-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.note) === i);
+  });
+  updateGoBtn();
+}
+
+function selectQual(q) {
+  SEL_QUAL = q;
+  document.querySelectorAll('.qual-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.qual === q);
+  });
+  updateGoBtn();
+}
+
+function updateGoBtn() {
+  const btn = document.getElementById('go-btn');
+  btn.classList.toggle('ready', SEL_ROOT !== null);
+}
+
+function goChord() {
+  if (SEL_ROOT === null) return;
+  showChord(SEL_ROOT, SEL_QUAL);
+}
+
+buildSelector();
 
 // ═══════════════════════════════════════════════════════════════
 // PWA: Register service worker
